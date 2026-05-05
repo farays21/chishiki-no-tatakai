@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知識の戦い — Chishiki no Tatakai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700;900&family=Cinzel+Decorative:wght@700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080b12;
+      --surface:  #0f1420;
+      --card:     #131926;
+      --border:   #1e2a3a;
+      --red:      #c8152a;
+      --red-glow: #e01e36;
+      --gold:     #e8a838;
+      --gold-dim: #9a6e20;
+      --text:     #e8e4d8;
+      --muted:    #6b7a8d;
+      --white:    #f4f0e6;
+      --correct:  #22c55e;
+      --wrong:    #ef4444;
+      --blue:     #3b82f6;
+      --radius:   12px;
+      --shadow:   0 8px 32px rgba(0,0,0,.6);
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans JP', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Screen Manager ───────────────────────────────────────────────────── */
+    .screen { display: none; position: relative; z-index: 1; }
+    .screen.active { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Typography ───────────────────────────────────────────────────────── */
+    .title-kanji {
+      font-family: 'Noto Sans JP', serif;
+      font-weight: 900;
+      font-size: clamp(3rem, 10vw, 6rem);
+      color: var(--white);
+      letter-spacing: -.02em;
+      line-height: 1;
+    }
+
+    .title-sub {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(.65rem, 2vw, .85rem);
+      letter-spacing: .25em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    /* ── Decorative Vertical Text ─────────────────────────────────────────── */
+    .deco-vtext {
+      writing-mode: vertical-rl;
+      font-family: 'Noto Sans JP', serif;
+      font-weight: 700;
+      font-size: 6rem;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(200,21,42,.15);
+      user-select: none;
+      pointer-events: none;
+      position: fixed;
+      top: 50%; transform: translateY(-50%);
+      line-height: 1;
+    }
+    .deco-vtext.left  { left: -1rem; }
+    .deco-vtext.right { right: -1rem; }
+
+    /* ── Divider ──────────────────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 1.5rem 0;
+    }
+    .divider-red {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+      margin: .5rem 0;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .75rem 2rem;
+      border: none; border-radius: var(--radius);
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: all .2s;
+      position: relative; overflow: hidden;
+    }
+    .btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: rgba(255,255,255,.08);
+      opacity: 0; transition: opacity .15s;
+    }
+    .btn:hover::after { opacity: 1; }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    .btn-red {
+      background: linear-gradient(135deg, var(--red), #a01020);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(200,21,42,.35), 0 4px 12px rgba(0,0,0,.4);
+    }
+    .btn-red:hover:not(:disabled) {
+      box-shadow: 0 0 30px rgba(200,21,42,.55), 0 4px 16px rgba(0,0,0,.5);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), #b07820);
+      color: #0a0a0f;
+      box-shadow: 0 0 20px rgba(232,168,56,.3), 0 4px 12px rgba(0,0,0,.4);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--muted); color: var(--text); }
+
+    .btn-full { width: 100%; }
+    .btn-lg { padding: 1rem 2.5rem; font-size: 1.1rem; }
+
+    /* ── Input ────────────────────────────────────────────────────────────── */
+    .input {
+      width: 100%;
+      padding: .85rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 1rem;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    .input:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(200,21,42,.15);
+    }
+    .input::placeholder { color: var(--muted); }
+
+    /* ── Card ─────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .card-header {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .75rem;
+    }
+
+    /* ── Badge ────────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .25rem .7rem;
+      border-radius: 999px;
+      font-size: .75rem; font-weight: 700;
+    }
+    .badge-red   { background: rgba(200,21,42,.2); color: var(--red-glow); border: 1px solid rgba(200,21,42,.3); }
+    .badge-gold  { background: rgba(232,168,56,.15); color: var(--gold); border: 1px solid rgba(232,168,56,.25); }
+    .badge-green { background: rgba(34,197,94,.15); color: var(--correct); border: 1px solid rgba(34,197,94,.25); }
+    .badge-blue  { background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.25); }
+
+    /* ── Notification Toast ───────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      background: var(--card); border: 1px solid var(--border);
+      padding: .8rem 1.5rem; border-radius: 999px;
+      font-size: .9rem; font-weight: 500;
+      z-index: 999; white-space: nowrap;
+      box-shadow: var(--shadow);
+      opacity: 0; transition: opacity .3s, transform .3s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Connection Status ────────────────────────────────────────────────── */
+    #ws-status {
+      position: fixed; top: 1rem; right: 1rem;
+      display: flex; align-items: center; gap: .4rem;
+      font-size: .72rem; font-weight: 600; color: var(--muted);
+      z-index: 100;
+    }
+    #ws-status .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted);
+    }
+    #ws-status.connected .dot { background: var(--correct); box-shadow: 0 0 6px var(--correct); }
+    #ws-status.disconnected .dot { background: var(--wrong); }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       SCREEN 1: HOME
+    ════════════════════════════════════════════════════════════════════════ */
+    #screen-home {
+      align-items: center; justify-content: center;
+      padding: 2rem 1.5rem;
+      gap: 3rem;
+    }
+
+    .home-hero { text-align: center; }
+
+    .home-hero .kamon {
+      width: 80px; height: 80px; margin: 0 auto 1.5rem;
+      position: relative;
+    }
+    .home-hero .kamon svg { width: 100%; height: 100%; }
+
+    .home-roles {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.5rem; width: 100%; max-width: 560px;
+    }
+
+    .role-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      cursor: pointer;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      text-align: center;
+    }
+    .role-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--red);
+      box-shadow: 0 0 24px rgba(200,21,42,.2), var(--shadow);
+    }
+    .role-card .role-icon { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
+    .role-card .role-title { font-size: 1.05rem; font-weight: 700; color: var(--white); }
+    .role-card .role-desc  { font-size: .8rem; color: var(--muted); margin-top: .35rem; }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       SCREEN 2: HOST SETUP (Pre-game Lobby)
+    ════════════════════════════════════════════════════════════════════════ */
+    #screen-host-setup {
+      align-items: center; padding: 2rem 1.5rem; gap: 1.5rem;
+    }
+
+    .host-setup-inner { width: 100%; max-width: 480px; }
+
+    .room-code-display {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .room-code-display .label { font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+    .room-code-display .code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 3rem; font-weight: 700;
+      color: var(--gold);
+      letter-spacing: .3em;
+      text-shadow: 0 0 20px rgba(232,168,56,.4);
+      margin: .3rem 0;
+    }
+    .room-code-display .hint { font-size: .78rem; color: var(--muted); }
+
+    .player-list {
+      list-style: none; display: flex; flex-direction: column; gap: .5rem;
+    }
+    .player-list li {
+      display: flex; align-items: center; gap: .75rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: .6rem 1rem;
+      font-size: .9rem; animation: slideIn .2s ease;
+    }
+    .player-list li .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--red), #601020);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .player-list li.host-tag .avatar {
+      background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+      color: #0a0a0f;
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       SCREEN 3: PLAYER JOIN
+    ════════════════════════════════════════════════════════════════════════ */
+    #screen-player-join {
+      align-items: center; justify-content: center;
+      padding: 2rem 1.5rem;
+    }
+    .join-form { width: 100%; max-width: 420px; }
+    .join-form h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: .4rem; letter-spacing: .05em; }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       SCREEN 4: PLAYER LOBBY
+    ════════════════════════════════════════════════════════════════════════ */
+    #screen-player-lobby {
+      align-items: center; justify-content: center;
+      padding: 2rem 1.5rem; text-align: center;
+    }
+    .lobby-waiting .pulse-ring {
+      width: 80px; height: 80px; border-radius: 50%;
+      border: 2px solid var(--red);
+      margin: 0 auto 1.5rem;
+      animation: pulseRing 2s ease-in-out infinite;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       SCREEN 5: GAME
+    ════════════════════════════════════════════════════════════════════════ */
+    #screen-game {
+      padding: 0; flex-direction: row;
+    }
+
+    .game-main {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 1.5rem; gap: 1rem;
+      overflow-y: auto;
+    }
+
+    .game-sidebar {
+      width: 260px; flex-shrink: 0;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 1.25rem;
+      overflow-y: auto;
+    }
+
+    /* Progress bar */
+    .question-progress {
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .progress-track {
+      flex: 1; height: 4px;
+      background: var(--border); border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--gold));
+      border-radius: 99px;
+      transition: width .5s ease;
+    }
+    .progress-label { font-size: .78rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+    /* Category badge */
+    .question-category { font-size: .78rem; font-weight: 700; }
+
+    /* Question card */
+    .question-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      position: relative; overflow: hidden;
+    }
+    .question-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--red), var(--gold));
+    }
+    .question-text {
+      font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+      font-weight: 700; line-height: 1.5;
+      color: var(--white);
+    }
+
+    /* Answer buttons */
+    .answers-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+    }
+    @media (max-width: 600px) { .answers-grid { grid-template-columns: 1fr; } }
+
+    .answer-btn {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      color: var(--text);
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: .9rem; font-weight: 500;
+      cursor: pointer; text-align: left;
+      transition: all .18s;
+      display: flex; align-items: flex-start; gap: .75rem;
+      position: relative; overflow: hidden;
+    }
+    .answer-btn:hover:not(:disabled):not(.revealed) {
+      border-color: var(--red);
+      background: rgba(200,21,42,.08);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(200,21,42,.2);
+    }
+    .answer-btn:disabled { cursor: not-allowed; }
+    .answer-btn .opt-label {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+      flex-shrink: 0; color: var(--muted);
+      transition: all .18s;
+    }
+    .answer-btn:hover:not(:disabled):not(.revealed) .opt-label {
+      background: var(--red); color: #fff; border-color: var(--red);
+    }
+
+    .answer-btn.selected {
+      border-color: var(--blue);
+      background: rgba(59,130,246,.12);
+      animation: selectPulse .3s ease;
+    }
+    .answer-btn.selected .opt-label { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    .answer-btn.correct {
+      border-color: var(--correct);
+      background: rgba(34,197,94,.12);
+    }
+    .answer-btn.correct .opt-label { background: var(--correct); color: #fff; border-color: var(--correct); }
+
+    .answer-btn.wrong {
+      border-color: var(--wrong);
+      background: rgba(239,68,68,.1);
+      opacity: .7;
+    }
+    .answer-btn.wrong .opt-label { background: var(--wrong); color: #fff; border-color: var(--wrong); }
+
+    /* Ripple effect on answer buttons */
+    .answer-btn .ripple {
+      position: absolute; border-radius: 50%;
+      background: rgba(255,255,255,.15);
+      transform: scale(0); animation: ripple .5s linear;
+      pointer-events: none;
+    }
+
+    /* Answer status overlay */
+    .answer-status {
+      min-height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; font-weight: 600;
+    }
+
+    /* Host controls */
+    .host-controls {
+      display: flex; gap: .75rem; flex-wrap: wrap;
+    }
+
+    /* Sidebar Leaderboard */
+    .sidebar-title {
+      font-size: .7rem; font-weight: 700; letter-spacing: .15em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .lb-list { display: flex; flex-direction: column; gap: .5rem; }
+    .lb-item {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .6rem .75rem;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; transition: all .3s;
+    }
+    .lb-item.top-1 { border-color: var(--gold); background: rgba(232,168,56,.05); }
+    .lb-item.top-2 { border-color: #a0a0b0; background: rgba(160,160,180,.03); }
+    .lb-item.top-3 { border-color: #c07840; background: rgba(192,120,64,.03); }
+    .lb-rank {
+      width: 22px; text-align: center;
+      font-size: .75rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+    }
+    .lb-item.top-1 .lb-rank { color: var(--gold); }
+    .lb-item.top-2 .lb-rank { color: #c0c0d0; }
+    .lb-item.top-3 .lb-rank { color: #c08040; }
+    .lb-name { flex: 1; font-size: .82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .82rem; font-weight: 700; color: var(--gold);
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       SCREEN 6: GAME OVER
+    ════════════════════════════════════════════════════════════════════════ */
+    #screen-gameover {
+      align-items: center; justify-content: center;
+      padding: 2rem 1.5rem; text-align: center; gap: 2rem;
+    }
+
+    .podium {
+      display: flex; align-items: flex-end; justify-content: center;
+      gap: .75rem; margin: 1rem 0;
+    }
+    .podium-slot {
+      display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    }
+    .podium-name {
+      font-size: .75rem; font-weight: 700; max-width: 80px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .podium-block {
+      display: flex; align-items: flex-end; justify-content: center;
+      border-radius: 8px 8px 0 0;
+      width: 80px;
+      position: relative; padding-bottom: .5rem;
+    }
+    .podium-block .pos {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem; font-weight: 900;
+    }
+    .podium-slot.p1 .podium-block { height: 120px; background: linear-gradient(180deg, rgba(232,168,56,.3), rgba(232,168,56,.1)); border: 1px solid rgba(232,168,56,.4); }
+    .podium-slot.p2 .podium-block { height: 85px;  background: linear-gradient(180deg, rgba(192,192,210,.2), rgba(192,192,210,.05)); border: 1px solid rgba(192,192,210,.3); }
+    .podium-slot.p3 .podium-block { height: 60px;  background: linear-gradient(180deg, rgba(192,120,64,.2), rgba(192,120,64,.05)); border: 1px solid rgba(192,120,64,.3); }
+    .podium-slot.p1 .podium-name { color: var(--gold); }
+    .podium-score { font-size: .75rem; color: var(--muted); }
+
+    .final-table {
+      width: 100%; max-width: 480px;
+      border-collapse: collapse;
+    }
+    .final-table th {
+      font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--muted); padding: .5rem .75rem; border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .final-table td {
+      padding: .65rem .75rem; font-size: .88rem;
+      border-bottom: 1px solid rgba(30,42,58,.5);
+    }
+    .final-table tr:last-child td { border-bottom: none; }
+    .final-table .rank-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--muted); }
+    .final-table .score-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--gold); }
+    .medal { font-size: 1rem; }
+
+    /* ── Animations ───────────────────────────────────────────────────────── */
+    @keyframes fadeIn   { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: none; } }
+    @keyframes slideIn  { from { opacity:0; transform: translateX(-8px); } to { opacity:1; transform: none; } }
+    @keyframes selectPulse { 0%{transform:scale(.97)} 50%{transform:scale(1.02)} 100%{transform:scale(1)} }
+    @keyframes pulseRing { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.6} }
+    @keyframes ripple    { to{transform:scale(4);opacity:0} }
+    @keyframes scoreFloat { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-40px)} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
+    }
+
+    .anim-fade  { animation: fadeIn .4s ease both; }
+    .anim-fade-2 { animation: fadeIn .4s ease .1s both; }
+    .anim-fade-3 { animation: fadeIn .4s ease .2s both; }
+
+    /* Score float popup */
+    .score-float {
+      position: fixed; font-size: 1.4rem; font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      pointer-events: none; z-index: 200;
+      animation: scoreFloat .9s ease forwards;
+    }
+
+    /* ── Responsive ───────────────────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .game-sidebar { display: none; }
+      .answers-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Misc ─────────────────────────────────────────────────────────────── */
+    .text-center { text-align: center; }
+    .text-muted   { color: var(--muted); }
+    .text-gold    { color: var(--gold); }
+    .text-red     { color: var(--red-glow); }
+    .text-correct { color: var(--correct); }
+    .text-wrong   { color: var(--wrong); }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+    .fw-700 { font-weight: 700; }
+    .mt-1 { margin-top: .5rem; }
+    .mt-2 { margin-top: 1rem; }
+    .mt-3 { margin-top: 1.5rem; }
+    .gap-1 { gap: .5rem; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .w-full { width: 100%; }
+
+    /* Mobile sidebar toggle */
+    #mobile-lb-btn {
+      display: none;
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 50;
+    }
+    @media (max-width: 700px) { #mobile-lb-btn { display: flex; } }
+
+    .mobile-lb-overlay {
+      display: none; position: fixed; inset: 0; z-index: 60;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    }
+    .mobile-lb-overlay.open { display: flex; flex-direction: column; justify-content: flex-end; }
+    .mobile-lb-sheet {
+      background: var(--card); border-radius: 16px 16px 0 0;
+      border-top: 1px solid var(--border);
+      padding: 1.5rem; max-height: 70vh; overflow-y: auto;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid var(--border);
+      border-top-color: var(--red); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+  </style>
+</head>
+<body>
+
+<!-- WS Status -->
+<div id="ws-status">
+  <div class="dot"></div>
+  <span id="ws-status-text">Menghubungkan…</span>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Decorative vertical text -->
+<div class="deco-vtext left">知識</div>
+<div class="deco-vtext right">戦い</div>
+
+<!-- Mobile Leaderboard Overlay -->
+<div class="mobile-lb-overlay" id="mobile-lb-overlay" onclick="closeMobileLb()">
+  <div class="mobile-lb-sheet" onclick="event.stopPropagation()">
+    <div class="sidebar-title">🏆 Papan Skor</div>
+    <div class="lb-list" id="mobile-lb-list"></div>
+    <button class="btn btn-ghost btn-full mt-2" onclick="closeMobileLb()">Tutup</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: HOME
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="home-hero anim-fade">
+    <div class="kamon">
+      <!-- Simplified mon (family crest) SVG -->
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="46" stroke="#c8152a" stroke-width="1.5" opacity=".6"/>
+        <circle cx="50" cy="50" r="38" stroke="#c8152a" stroke-width=".8" opacity=".3"/>
+        <circle cx="50" cy="50" r="4" fill="#c8152a" opacity=".8"/>
+        <line x1="50" y1="8"  x2="50" y2="92" stroke="#c8152a" stroke-width=".8" opacity=".3"/>
+        <line x1="8"  y1="50" x2="92" y2="50" stroke="#c8152a" stroke-width=".8" opacity=".3"/>
+        <line x1="20" y1="20" x2="80" y2="80" stroke="#c8152a" stroke-width=".6" opacity=".2"/>
+        <line x1="80" y1="20" x2="20" y2="80" stroke="#c8152a" stroke-width=".6" opacity=".2"/>
+        <polygon points="50,15 56,38 50,44 44,38" fill="#c8152a" opacity=".7"/>
+        <polygon points="85,50 62,56 56,50 62,44" fill="#c8152a" opacity=".7"/>
+        <polygon points="50,85 44,62 50,56 56,62" fill="#c8152a" opacity=".7"/>
+        <polygon points="15,50 38,44 44,50 38,56" fill="#c8152a" opacity=".7"/>
+      </svg>
+    </div>
+    <div class="title-kanji">知識の戦い</div>
+    <div class="title-sub" style="margin-top:.5rem">Chishiki no Tatakai</div>
+    <p class="text-muted mt-2" style="font-size:.9rem; max-width:340px; margin:1rem auto 0">
+      Adu kecepatan &amp; pengetahuan secara real-time. Siapa yang tercepat menjawab benar?
+    </p>
+  </div>
+  <div class="home-roles anim-fade-2">
+    <div class="role-card" onclick="goToHostSetup()">
+      <span class="role-icon">👑</span>
+      <div class="role-title">Buat Room</div>
+      <div class="role-desc">Jadilah Host &amp; undang teman</div>
+    </div>
+    <div class="role-card" onclick="showScreen('screen-player-join')">
+      <span class="role-icon">⚔️</span>
+      <div class="role-title">Masuk Room</div>
+      <div class="role-desc">Bergabung sebagai Peserta</div>
+    </div>
+  </div>
+  <p class="text-muted anim-fade-3" style="font-size:.75rem; text-align:center">
+    15 soal • +10 benar • −5 salah • Real-time
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: HOST SETUP
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-host-setup" class="screen">
+  <div class="host-setup-inner">
+
+    <div class="flex items-center justify-between" style="margin-bottom:1.5rem">
+      <div>
+        <div class="title-sub">Lobby Host</div>
+        <h1 style="font-size:1.5rem; font-weight:900; color:var(--white)">知識の戦い</h1>
+      </div>
+      <button class="btn btn-ghost" onclick="leaveAndGoHome()" style="font-size:.8rem">← Keluar</button>
+    </div>
+
+    <div class="room-code-display card anim-fade">
+      <div class="label">Kode Room — Bagikan kepada peserta</div>
+      <div class="code" id="host-room-code">——</div>
+      <div class="hint">Peserta masuk dengan kode ini</div>
+      <button class="btn btn-ghost mt-2" onclick="copyRoomCode()" style="font-size:.8rem; padding:.4rem 1rem">
+        📋 Salin Kode
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="card anim-fade-2">
+      <div class="flex items-center justify-between" style="margin-bottom:.75rem">
+        <div class="card-header" style="margin:0">Peserta Bergabung</div>
+        <span class="badge badge-blue" id="host-player-count">0 Peserta</span>
+      </div>
+      <ul class="player-list" id="host-player-list">
+        <li style="justify-content:center; color:var(--muted); font-size:.85rem; border:none; background:none">
+          Menunggu peserta bergabung…
+        </li>
+      </ul>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-red btn-full btn-lg anim-fade-3"
+            id="btn-start-game" disabled onclick="sendStartGame()">
+      <span>⚔️</span> Mulai Permainan
+    </button>
+    <p class="text-muted text-center mt-1" style="font-size:.78rem">Minimal 1 peserta untuk memulai</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: PLAYER JOIN
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-player-join" class="screen">
+  <div style="display:flex; align-items:center; justify-content:center; min-height:100vh; padding:2rem 1.5rem">
+    <div class="join-form anim-fade">
+      <div class="text-center" style="margin-bottom:2rem">
+        <div class="title-kanji" style="font-size:2.5rem">入室</div>
+        <div class="title-sub" style="margin-top:.3rem">Masuk ke Room</div>
+      </div>
+
+      <div class="form-group">
+        <label>Nama Kamu</label>
+        <input type="text" id="player-name-input" class="input"
+               placeholder="Masukkan namamu…" maxlength="24"
+               onkeydown="if(event.key==='Enter')joinRoom()" />
+      </div>
+
+      <div class="form-group">
+        <label>Kode Room</label>
+        <input type="text" id="player-room-code-input" class="input"
+               placeholder="contoh: AB1CD2" maxlength="6"
+               style="text-transform:uppercase; font-family:'JetBrains Mono',monospace; letter-spacing:.15em; font-size:1.1rem"
+               oninput="this.value=this.value.toUpperCase()"
+               onkeydown="if(event.key==='Enter')joinRoom()" />
+      </div>
+
+      <button class="btn btn-red btn-full btn-lg mt-2" id="btn-join" onclick="joinRoom()">
+        ⚔️ Bergabung
+      </button>
+      <button class="btn btn-ghost btn-full mt-1" onclick="showScreen('screen-home')">
+        ← Kembali
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: PLAYER LOBBY
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-player-lobby" class="screen">
+  <div class="lobby-waiting anim-fade" style="text-align:center; padding:3rem 2rem; margin:auto">
+    <div class="pulse-ring">⏳</div>
+    <h2 style="font-size:1.3rem; font-weight:700">Menunggu Host Memulai</h2>
+    <p class="text-muted mt-1" style="font-size:.9rem">Permainan akan segera dimulai…</p>
+    <div class="divider" style="max-width:200px; margin:1.5rem auto"></div>
+    <div class="badge badge-gold" id="player-lobby-room">Room: —</div>
+    <div class="divider" style="max-width:200px; margin:1.5rem auto"></div>
+    <p class="text-muted" style="font-size:.8rem">Peserta yang bergabung:</p>
+    <ul class="player-list mt-2" id="lobby-player-list" style="max-width:320px; margin:0 auto"></ul>
+    <button class="btn btn-ghost mt-3" style="font-size:.8rem" onclick="leaveAndGoHome()">Keluar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: GAME
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
+
+  <!-- Main area -->
+  <div class="game-main">
+
+    <!-- Top bar -->
+    <div class="flex items-center justify-between" style="flex-wrap:wrap; gap:.75rem">
+      <div class="question-progress" style="flex:1; min-width:180px">
+        <div class="progress-track">
+          <div class="progress-fill" id="q-progress-fill" style="width:0%"></div>
+        </div>
+        <span class="progress-label" id="q-progress-label">0 / 15</span>
+      </div>
+      <div id="q-category" class="badge badge-red">—</div>
+    </div>
+
+    <!-- Question -->
+    <div class="question-card anim-fade" id="question-card">
+      <p class="text-muted" style="font-size:.78rem; margin-bottom:.75rem" id="q-index-label">Soal 1</p>
+      <p class="question-text" id="question-text">Memuat soal…</p>
+    </div>
+
+    <!-- Answers -->
+    <div class="answers-grid" id="answers-grid"></div>
+
+    <!-- Answer status -->
+    <div class="answer-status" id="answer-status"></div>
+
+    <!-- Host controls -->
+    <div class="host-controls" id="host-game-controls" style="display:none">
+      <button class="btn btn-ghost" onclick="sendSkipQuestion()" style="font-size:.82rem">
+        ⏭ Skip Soal
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Sidebar Leaderboard -->
+  <div class="game-sidebar">
+    <div class="sidebar-title">🏆 Papan Skor</div>
+    <div class="lb-list" id="sidebar-lb-list">
+      <p class="text-muted" style="font-size:.8rem">Belum ada data…</p>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile LB toggle -->
+<button class="btn btn-red" id="mobile-lb-btn" onclick="openMobileLb()" style="border-radius:50%;width:50px;height:50px;padding:0;font-size:1.2rem">
+  🏆
+</button>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: GAME OVER
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-gameover" class="screen">
+  <div class="anim-fade text-center">
+    <div class="title-kanji" style="font-size:3rem">終了</div>
+    <div class="title-sub">Permainan Selesai</div>
+  </div>
+
+  <div class="podium anim-fade-2" id="podium"></div>
+
+  <table class="final-table anim-fade-3" id="final-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nama</th>
+        <th>Skor</th>
+        <th>✅</th>
+        <th>❌</th>
+      </tr>
+    </thead>
+    <tbody id="final-tbody"></tbody>
+  </table>
+
+  <div class="flex gap-1 mt-3 anim-fade-3" style="flex-wrap:wrap; justify-content:center">
+    <button id="btn-play-again" class="btn btn-red btn-lg" style="display:none" onclick="playAgain()">
+      🔄 Main Lagi
+    </button>
+    <button class="btn btn-ghost" onclick="leaveAndGoHome()">🏠 Menu Utama</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const state = {
+  ws: null,
+  roomId: null,
+  playerId: null,
+  isHost: false,
+  playerName: '',
+  questionDone: false,
+  myAnswerIndex: null,   // null = haven't answered
+  currentCorrectIndex: null,
+}
+
+// ─── WebSocket ────────────────────────────────────────────────────────────────
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+  const ws = new WebSocket(`${proto}://${location.host}/ws`)
+  state.ws = ws
+
+  ws.onopen = () => setWsStatus(true)
+
+  ws.onclose = () => {
+    setWsStatus(false)
+    // Try to reconnect after 3s if on a non-home screen
+    if (currentScreen() !== 'screen-home') {
+      setTimeout(connectWS, 3000)
+    }
+  }
+
+  ws.onerror = () => setWsStatus(false)
+
+  ws.onmessage = (e) => {
+    let msg
+    try { msg = JSON.parse(e.data) } catch { return }
+    handleServerMessage(msg)
+  }
+}
+
+function sendWS(obj) {
+  if (state.ws?.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify(obj))
+  } else {
+    showToast('⚠️ Koneksi terputus. Mencoba ulang…')
+    connectWS()
+  }
+}
+
+function setWsStatus(connected) {
+  const el = document.getElementById('ws-status')
+  const txt = document.getElementById('ws-status-text')
+  el.className = connected ? 'connected' : 'disconnected'
+  txt.textContent = connected ? 'Terhubung' : 'Terputus'
+}
+
+// ─── Screen Manager ───────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+  document.getElementById(id).classList.add('active')
+  window.scrollTo(0, 0)
+}
+
+function currentScreen() {
+  return document.querySelector('.screen.active')?.id ?? ''
+}
+
+// ─── Home ─────────────────────────────────────────────────────────────────────
+async function goToHostSetup() {
+  showToast('Membuat room…')
+  try {
+    const res = await fetch('/api/create-room', { method: 'POST' })
+    const data = await res.json()
+    if (!data.roomId) throw new Error('Gagal membuat room')
+
+    state.roomId = data.roomId
+    state.isHost = true
+    state.playerName = 'Host'
+
+    document.getElementById('host-room-code').textContent = data.roomId
+    document.getElementById('host-player-list').innerHTML = ''
+    document.getElementById('host-player-count').textContent = '0 Peserta'
+    document.getElementById('btn-start-game').disabled = true
+    showScreen('screen-host-setup')
+
+    // Join the room as host via WS
+    sendWS({ type: 'join', roomId: data.roomId, playerName: 'Host', isHost: true })
+  } catch (err) {
+    showToast('❌ Gagal membuat room: ' + err.message)
+  }
+}
+
+function copyRoomCode() {
+  navigator.clipboard.writeText(state.roomId ?? '')
+  showToast('📋 Kode room disalin!')
+}
+
+// ─── Player Join ──────────────────────────────────────────────────────────────
+function joinRoom() {
+  const name = document.getElementById('player-name-input').value.trim()
+  const code = document.getElementById('player-room-code-input').value.trim().toUpperCase()
+
+  if (!name)  { showToast('⚠️ Masukkan namamu!'); return }
+  if (!code)  { showToast('⚠️ Masukkan kode room!'); return }
+  if (code.length < 4) { showToast('⚠️ Kode room tidak valid'); return }
+
+  state.playerName = name
+  state.roomId = code
+  state.isHost = false
+
+  const btn = document.getElementById('btn-join')
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Bergabung…'
+
+  sendWS({ type: 'join', roomId: code, playerName: name, isHost: false })
+}
+
+// ─── Host: Start Game ─────────────────────────────────────────────────────────
+function sendStartGame() {
+  sendWS({ type: 'start_game', roomId: state.roomId })
+}
+
+// ─── Game: Answer ─────────────────────────────────────────────────────────────
+function submitAnswer(index) {
+  if (state.questionDone || state.myAnswerIndex !== null) return
+  state.myAnswerIndex = index
+
+  // Highlight selected
+  document.querySelectorAll('.answer-btn').forEach((btn, i) => {
+    if (i === index) btn.classList.add('selected')
+    btn.disabled = true
+  })
+
+  sendWS({ type: 'answer', roomId: state.roomId, answerIndex: index })
+}
+
+function sendSkipQuestion() {
+  sendWS({ type: 'skip_question', roomId: state.roomId })
+}
+
+// ─── Server Message Handler ────────────────────────────────────────────────────
+function handleServerMessage(msg) {
+  switch (msg.type) {
+
+    case 'room_joined': {
+      state.playerId = msg.playerId
+      state.isHost   = msg.isHost
+
+      if (msg.isHost) {
+        // Already on host-setup screen
+      } else {
+        // Transition to player lobby
+        document.getElementById('player-lobby-room').textContent = 'Room: ' + state.roomId
+        const btn = document.getElementById('btn-join')
+        btn.disabled = false
+        btn.innerHTML = '⚔️ Bergabung'
+        showScreen('screen-player-lobby')
+      }
+      break
+    }
+
+    case 'players_update': {
+      const participants = msg.players.filter(p => !p.isHost)
+      updateHostPlayerList(participants)
+      updateLobbyPlayerList(msg.players)
+      // Enable start button when there's at least 1 participant
+      const btn = document.getElementById('btn-start-game')
+      if (btn) btn.disabled = participants.length === 0
+      document.getElementById('host-player-count').textContent = `${participants.length} Peserta`
+      break
+    }
+
+    case 'game_started': {
+      initGameScreen()
+      showScreen('screen-game')
+      showToast('⚔️ Permainan Dimulai!')
+      break
+    }
+
+    case 'question': {
+      renderQuestion(msg.data, msg.index, msg.total)
+      break
+    }
+
+    case 'answer_result': {
+      const isMine = msg.playerId === state.playerId
+      if (isMine) {
+        const statusEl = document.getElementById('answer-status')
+        if (msg.correct) {
+          statusEl.innerHTML = `<span class="text-correct fw-700">✅ Benar! +${msg.scoreChange} poin</span>`
+          showScoreFloat('+10', 'var(--correct)')
+        } else {
+          statusEl.innerHTML = `<span class="text-wrong fw-700">❌ Salah! ${msg.scoreChange} poin</span>`
+          showScoreFloat('-5', 'var(--wrong)')
+        }
+      } else if (!msg.correct) {
+        showToast(`❌ ${msg.playerName} menjawab salah`)
+      }
+      break
+    }
+
+    case 'question_done': {
+      state.questionDone = true
+      revealAnswers(msg.correctIndex, msg.winnerId, msg.winnerName)
+      if (msg.winnerId && msg.winnerId !== state.playerId) {
+        showToast(`✅ ${msg.winnerName} menjawab benar!`)
+      } else if (!msg.winnerId) {
+        showToast('⏭ Tidak ada yang menjawab benar. Lanjut soal berikutnya.')
+        document.getElementById('answer-status').innerHTML =
+          '<span class="text-muted">Tidak ada yang menjawab benar</span>'
+      }
+      break
+    }
+
+    case 'leaderboard': {
+      renderLeaderboard(msg.players)
+      break
+    }
+
+    case 'game_over': {
+      renderGameOver(msg.players)
+      showScreen('screen-gameover')
+      break
+    }
+
+    case 'host_disconnected': {
+      showToast('⚠️ Host terputus. Room ditutup.')
+      setTimeout(leaveAndGoHome, 2000)
+      break
+    }
+
+    case 'player_left': {
+      showToast(`👋 ${msg.playerName} meninggalkan room`)
+      break
+    }
+
+    case 'error': {
+      showToast('❌ ' + msg.message)
+      // Re-enable join button if it was disabled
+      const btn = document.getElementById('btn-join')
+      if (btn) { btn.disabled = false; btn.innerHTML = '⚔️ Bergabung' }
+      break
+    }
+  }
+}
+
+// ─── UI: Player Lists ─────────────────────────────────────────────────────────
+function updateHostPlayerList(players) {
+  const ul = document.getElementById('host-player-list')
+  if (players.length === 0) {
+    ul.innerHTML = '<li style="justify-content:center; color:var(--muted); font-size:.85rem; border:none; background:none">Menunggu peserta bergabung…</li>'
+    return
+  }
+  ul.innerHTML = players.map(p => `
+    <li>
+      <div class="avatar">${p.name[0].toUpperCase()}</div>
+      <span>${escHtml(p.name)}</span>
+    </li>
+  `).join('')
+}
+
+function updateLobbyPlayerList(players) {
+  const ul = document.getElementById('lobby-player-list')
+  if (!ul) return
+  ul.innerHTML = players.map(p => `
+    <li class="${p.isHost ? 'host-tag' : ''}">
+      <div class="avatar">${p.name[0].toUpperCase()}</div>
+      <span>${escHtml(p.name)} ${p.isHost ? '<span class="badge badge-gold" style="font-size:.65rem;padding:.1rem .4rem">Host</span>' : ''}</span>
+    </li>
+  `).join('')
+}
+
+// ─── UI: Game Screen Init ─────────────────────────────────────────────────────
+function initGameScreen() {
+  state.questionDone  = false
+  state.myAnswerIndex = null
+  document.getElementById('answer-status').innerHTML = ''
+  if (state.isHost) {
+    document.getElementById('host-game-controls').style.display = 'flex'
+  }
+}
+
+// ─── UI: Render Question ──────────────────────────────────────────────────────
+function renderQuestion(q, index, total) {
+  state.questionDone  = false
+  state.myAnswerIndex = null
+  state.currentCorrectIndex = null
+
+  // Progress
+  const pct = Math.round((index / total) * 100)
+  document.getElementById('q-progress-fill').style.width = pct + '%'
+  document.getElementById('q-progress-label').textContent = `${index} / ${total}`
+  document.getElementById('q-index-label').textContent = `Soal ke-${index}`
+  document.getElementById('q-category').textContent = q.category
+  document.getElementById('question-text').textContent = q.question
+
+  // Answers
+  const labels = ['A', 'B', 'C', 'D']
+  const grid = document.getElementById('answers-grid')
+  grid.innerHTML = q.options.map((opt, i) => `
+    <button class="answer-btn anim-fade" style="animation-delay:${i * 0.06}s"
+            onclick="submitAnswer(${i})" ${state.isHost ? 'disabled' : ''}>
+      <span class="opt-label">${labels[i]}</span>
+      <span>${escHtml(opt)}</span>
+    </button>
+  `).join('')
+
+  // Clear status
+  document.getElementById('answer-status').innerHTML = ''
+
+  // Animate question card
+  const card = document.getElementById('question-card')
+  card.style.animation = 'none'
+  void card.offsetWidth
+  card.style.animation = 'fadeIn .4s ease'
+}
+
+// ─── UI: Reveal Answers ───────────────────────────────────────────────────────
+function revealAnswers(correctIndex, winnerId, winnerName) {
+  state.currentCorrectIndex = correctIndex
+  const btns = document.querySelectorAll('.answer-btn')
+  btns.forEach((btn, i) => {
+    btn.classList.add('revealed')
+    btn.disabled = true
+    if (i === correctIndex) {
+      btn.classList.remove('selected')
+      btn.classList.add('correct')
+    } else if (i === state.myAnswerIndex && state.myAnswerIndex !== correctIndex) {
+      btn.classList.add('wrong')
+    }
+  })
+}
+
+// ─── UI: Leaderboard ──────────────────────────────────────────────────────────
+function renderLeaderboard(players) {
+  const nonHost = players.filter(p => !p.isHost)
+  const html = nonHost.map((p, i) => {
+    const rank = i + 1
+    const rankClass = rank <= 3 ? `top-${rank}` : ''
+    const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank
+    return `
+      <div class="lb-item ${rankClass}">
+        <span class="lb-rank">${rankEmoji}</span>
+        <span class="lb-name">${escHtml(p.name)}</span>
+        <span class="lb-score">${p.score}</span>
+      </div>
+    `
+  }).join('')
+
+  const sidebarEl = document.getElementById('sidebar-lb-list')
+  const mobileEl  = document.getElementById('mobile-lb-list')
+  if (sidebarEl) sidebarEl.innerHTML = html || '<p class="text-muted" style="font-size:.8rem">—</p>'
+  if (mobileEl)  mobileEl.innerHTML  = html || '<p class="text-muted" style="font-size:.8rem">—</p>'
+}
+
+// ─── UI: Game Over ────────────────────────────────────────────────────────────
+function renderGameOver(players) {
+  const nonHost = players.filter(p => !p.isHost)
+
+  // Podium (top 3)
+  const podiumEl = document.getElementById('podium')
+  const top3 = [nonHost[1], nonHost[0], nonHost[2]].filter(Boolean) // 2nd, 1st, 3rd
+  const podiumOrder = [{ cls: 'p2', h: '85px' }, { cls: 'p1', h: '120px' }, { cls: 'p3', h: '60px' }]
+  const medals = ['🥈', '🥇', '🥉']
+
+  podiumEl.innerHTML = top3.map((p, idx) => `
+    <div class="podium-slot ${podiumOrder[idx].cls}">
+      <div class="podium-name">${escHtml(p.name)}</div>
+      <div class="podium-score">${p.score} pts</div>
+      <div class="podium-block" style="height:${podiumOrder[idx].h}">
+        <span class="pos">${medals[idx]}</span>
+      </div>
+    </div>
+  `).join('')
+
+  // Full table
+  const tbody = document.getElementById('final-tbody')
+  const rankMedals = ['🥇', '🥈', '🥉']
+  tbody.innerHTML = nonHost.map((p, i) => `
+    <tr>
+      <td class="rank-cell">${rankMedals[i] ?? (i + 1)}</td>
+      <td>${escHtml(p.name)}</td>
+      <td class="score-cell">${p.score}</td>
+      <td class="text-correct fw-700">${p.correctAnswers}</td>
+      <td class="text-wrong fw-700">${p.wrongAnswers}</td>
+    </tr>
+  `).join('')
+
+  // Show "Play Again" only for host
+  document.getElementById('btn-play-again').style.display = state.isHost ? 'inline-flex' : 'none'
+}
+
+// ─── Play Again ───────────────────────────────────────────────────────────────
+function playAgain() {
+  // Re-use the same room – just reload
+  leaveAndGoHome()
+}
+
+// ─── Leave / Home ─────────────────────────────────────────────────────────────
+function leaveAndGoHome() {
+  if (state.ws) { state.ws.close(); state.ws = null }
+  state.roomId = null
+  state.playerId = null
+  state.isHost = false
+  state.playerName = ''
+  document.getElementById('player-name-input').value = ''
+  document.getElementById('player-room-code-input').value = ''
+  showScreen('screen-home')
+  connectWS()
+}
+
+// ─── Score Float ──────────────────────────────────────────────────────────────
+function showScoreFloat(text, color) {
+  const el = document.createElement('div')
+  el.className = 'score-float'
+  el.textContent = text
+  el.style.color  = color
+  el.style.left   = (window.innerWidth / 2 - 20) + 'px'
+  el.style.top    = (window.innerHeight / 2) + 'px'
+  document.body.appendChild(el)
+  el.addEventListener('animationend', () => el.remove())
+}
+
+// ─── Mobile Leaderboard ───────────────────────────────────────────────────────
+function openMobileLb()  { document.getElementById('mobile-lb-overlay').classList.add('open') }
+function closeMobileLb() { document.getElementById('mobile-lb-overlay').classList.remove('open') }
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+let toastTimer
+function showToast(msg, duration = 2800) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('show'), duration)
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+connectWS()
+</script>
+</body>
+</html>
