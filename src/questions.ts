@@ -218,6 +218,13 @@ export const questionBank: Question[] = [
     correctIndex: 2,
     category: "🍨 Kuliner",
   },
+  {
+    id: 27,
+    question: "Berikut ini yang bukan termasuk Wakil Presiden Soeharto adalah...",
+    options: ["Sri Sultan Hamengkubowono IX", "Try Sutrisno", "Prof. Dr.- Ing Bacharuddin Jusuf Habibie", "Hamzah Haz"],
+    correctIndex: 3,
+    category: "📜 Sejarah",
+  },
 ];
 
 /** Returns `count` questions chosen randomly from the bank (no duplicates). */
