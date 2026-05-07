@@ -1,26 +1,29 @@
-import type { Room, Player, PlayerPublic, GameState } from './types'
-import { pickRandomQuestions } from './questions'
+import type { Room, Player, PlayerPublic, GameState } from "./types";
+import { pickRandomQuestions } from "./questions";
 
-const TOTAL_QUESTIONS = 15
-const POINTS_CORRECT = 10
-const POINTS_WRONG = -5
-const AUTO_ADVANCE_DELAY_MS = 1500 // time before auto-advancing after correct answer
+const TOTAL_QUESTIONS = 25;
+const POINTS_CORRECT = 10;
+const POINTS_WRONG = -5;
+const AUTO_ADVANCE_DELAY_MS = 1500; // time before auto-advancing after correct answer
 
 // ─── Singleton Rooms Store ────────────────────────────────────────────────────
 
-const rooms = new Map<string, Room>()
+const rooms = new Map<string, Room>();
 
 // ─── ID Helpers ───────────────────────────────────────────────────────────────
 
 function generateId(len = 6): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from(
+    { length: len },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join("");
 }
 
 // ─── Public Helpers ───────────────────────────────────────────────────────────
 
 export function getRoom(roomId: string): Room | undefined {
-  return rooms.get(roomId)
+  return rooms.get(roomId);
 }
 
 export function playerPublic(p: Player): PlayerPublic {
@@ -31,71 +34,80 @@ export function playerPublic(p: Player): PlayerPublic {
     isHost: p.isHost,
     correctAnswers: p.correctAnswers,
     wrongAnswers: p.wrongAnswers,
-  }
+  };
 }
 
 export function getLeaderboard(room: Room): PlayerPublic[] {
   return [...room.players.values()]
     .map(playerPublic)
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 }
 
 // ─── Broadcast Helpers ────────────────────────────────────────────────────────
 
 export function broadcast(room: Room, message: object, excludeId?: string) {
-  const payload = JSON.stringify(message)
+  const payload = JSON.stringify(message);
   for (const [id, p] of room.players) {
     if (id !== excludeId) {
-      try { p.ws.send(payload) } catch { /* stale connection */ }
+      try {
+        p.ws.send(payload);
+      } catch {
+        /* stale connection */
+      }
     }
   }
 }
 
 export function sendTo(player: Player, message: object) {
-  try { player.ws.send(JSON.stringify(message)) } catch { /* stale connection */ }
+  try {
+    player.ws.send(JSON.stringify(message));
+  } catch {
+    /* stale connection */
+  }
 }
 
 // ─── Room Lifecycle ───────────────────────────────────────────────────────────
 
 export function createRoom(): { roomId: string; hostId: string } {
-  const roomId = generateId()
-  const hostId = generateId(8)
+  const roomId = generateId();
+  const hostId = generateId(8);
 
   const game: GameState = {
-    status: 'waiting',
+    status: "waiting",
     questions: [],
     currentIndex: 0,
     answeredPlayerIds: new Set(),
     questionDone: false,
-  }
+  };
 
   rooms.set(roomId, {
     id: roomId,
     hostId,
     players: new Map(),
     game,
-  })
+  });
 
-  return { roomId, hostId }
+  return { roomId, hostId };
 }
 
 export function joinRoom(
   roomId: string,
   playerName: string,
   isHost: boolean,
-  ws: Player['ws'],
+  ws: Player["ws"],
 ): { player: Player; error?: never } | { player?: never; error: string } {
-  const room = rooms.get(roomId)
-  if (!room) return { error: 'Room tidak ditemukan.' }
-  if (room.game.status !== 'waiting') return { error: 'Permainan sudah dimulai.' }
+  const room = rooms.get(roomId);
+  if (!room) return { error: "Room tidak ditemukan." };
+  if (room.game.status !== "waiting")
+    return { error: "Permainan sudah dimulai." };
 
-  const trimmedName = playerName.trim().slice(0, 24)
-  if (!trimmedName) return { error: 'Nama tidak boleh kosong.' }
+  const trimmedName = playerName.trim().slice(0, 24);
+  if (!trimmedName) return { error: "Nama tidak boleh kosong." };
 
   // Prevent duplicate names
   for (const p of room.players.values()) {
     if (p.name.toLowerCase() === trimmedName.toLowerCase()) {
-      return { error: 'Nama sudah digunakan dalam room ini.' }
+      return { error: "Nama sudah digunakan dalam room ini." };
     }
   }
 
@@ -108,77 +120,83 @@ export function joinRoom(
     answeredCurrentQuestion: false,
     correctAnswers: 0,
     wrongAnswers: 0,
-  }
+  };
 
-  room.players.set(player.id, player)
-  return { player }
+  room.players.set(player.id, player);
+  return { player };
 }
 
 export function removePlayer(roomId: string, playerId: string): boolean {
-  const room = rooms.get(roomId)
-  if (!room) return false
-  return room.players.delete(playerId)
+  const room = rooms.get(roomId);
+  if (!room) return false;
+  return room.players.delete(playerId);
 }
 
 export function cleanupEmptyRoom(roomId: string) {
-  const room = rooms.get(roomId)
+  const room = rooms.get(roomId);
   if (room && room.players.size === 0) {
-    rooms.delete(roomId)
+    rooms.delete(roomId);
   }
 }
 
 // ─── Game Control ─────────────────────────────────────────────────────────────
 
 export function startGame(roomId: string): { error?: string } {
-  const room = rooms.get(roomId)
-  if (!room) return { error: 'Room tidak ditemukan.' }
-  if (room.game.status !== 'waiting') return { error: 'Game sudah berjalan.' }
+  const room = rooms.get(roomId);
+  if (!room) return { error: "Room tidak ditemukan." };
+  if (room.game.status !== "waiting") return { error: "Game sudah berjalan." };
 
-  const participants = [...room.players.values()].filter(p => !p.isHost)
-  if (participants.length === 0) return { error: 'Belum ada peserta yang bergabung.' }
+  const participants = [...room.players.values()].filter((p) => !p.isHost);
+  if (participants.length === 0)
+    return { error: "Belum ada peserta yang bergabung." };
 
-  room.game.status = 'playing'
-  room.game.questions = pickRandomQuestions(TOTAL_QUESTIONS)
-  room.game.currentIndex = 0
-  room.game.answeredPlayerIds = new Set()
-  room.game.questionDone = false
+  room.game.status = "playing";
+  room.game.questions = pickRandomQuestions(TOTAL_QUESTIONS);
+  room.game.currentIndex = 0;
+  room.game.answeredPlayerIds = new Set();
+  room.game.questionDone = false;
 
   // Reset scores
   for (const p of room.players.values()) {
-    p.score = 0
-    p.correctAnswers = 0
-    p.wrongAnswers = 0
-    p.answeredCurrentQuestion = false
+    p.score = 0;
+    p.correctAnswers = 0;
+    p.wrongAnswers = 0;
+    p.answeredCurrentQuestion = false;
   }
 
-  broadcast(room, { type: 'game_started' })
-  broadcastCurrentQuestion(room)
+  broadcast(room, { type: "game_started" });
+  broadcastCurrentQuestion(room);
 
-  return {}
+  return {};
 }
 
 function broadcastCurrentQuestion(room: Room) {
-  const { game } = room
+  const { game } = room;
   if (game.currentIndex >= game.questions.length) {
-    endGame(room)
-    return
+    endGame(room);
+    return;
   }
 
-  const q = game.questions[game.currentIndex]
-  game.answeredPlayerIds = new Set()
-  game.questionDone = false
+  const q = game.questions[game.currentIndex];
+  game.answeredPlayerIds = new Set();
+  game.questionDone = false;
 
   // Reset per-question answer flag for all players
   for (const p of room.players.values()) {
-    p.answeredCurrentQuestion = false
+    p.answeredCurrentQuestion = false;
   }
 
   broadcast(room, {
-    type: 'question',
-    data: { id: q.id, question: q.question, options: q.options, category: q.category },
+    type: "question",
+    data: {
+      id: q.id,
+      question: q.question,
+      options: q.options,
+      category: q.category,
+    },
     index: game.currentIndex + 1,
     total: game.questions.length,
-  })
+  });
 }
 
 export function handleAnswer(
@@ -186,125 +204,130 @@ export function handleAnswer(
   playerId: string,
   answerIndex: number,
 ): { error?: string } {
-  const room = rooms.get(roomId)
-  if (!room) return { error: 'Room tidak ditemukan.' }
+  const room = rooms.get(roomId);
+  if (!room) return { error: "Room tidak ditemukan." };
 
-  const { game } = room
-  if (game.status !== 'playing') return { error: 'Game belum dimulai.' }
-  if (game.questionDone) return { error: 'Soal sudah selesai.' }
+  const { game } = room;
+  if (game.status !== "playing") return { error: "Game belum dimulai." };
+  if (game.questionDone) return { error: "Soal sudah selesai." };
 
-  const player = room.players.get(playerId)
-  if (!player) return { error: 'Pemain tidak ditemukan.' }
-  if (player.isHost) return { error: 'Host tidak bisa menjawab.' }
-  if (player.answeredCurrentQuestion) return { error: 'Kamu sudah menjawab soal ini.' }
-  if (game.answeredPlayerIds.has(playerId)) return { error: 'Kamu sudah menjawab.' }
+  const player = room.players.get(playerId);
+  if (!player) return { error: "Pemain tidak ditemukan." };
+  if (player.isHost) return { error: "Host tidak bisa menjawab." };
+  if (player.answeredCurrentQuestion)
+    return { error: "Kamu sudah menjawab soal ini." };
+  if (game.answeredPlayerIds.has(playerId))
+    return { error: "Kamu sudah menjawab." };
 
   // Lock this player out of current question
-  player.answeredCurrentQuestion = true
-  game.answeredPlayerIds.add(playerId)
+  player.answeredCurrentQuestion = true;
+  game.answeredPlayerIds.add(playerId);
 
-  const currentQ = game.questions[game.currentIndex]
-  const correct = answerIndex === currentQ.correctIndex
+  const currentQ = game.questions[game.currentIndex];
+  const correct = answerIndex === currentQ.correctIndex;
 
   if (correct) {
-    player.score += POINTS_CORRECT
-    player.correctAnswers++
+    player.score += POINTS_CORRECT;
+    player.correctAnswers++;
 
     // Mark question done so no more answers are accepted
-    game.questionDone = true
+    game.questionDone = true;
 
     // Broadcast result + leaderboard
     broadcast(room, {
-      type: 'answer_result',
+      type: "answer_result",
       correct: true,
       playerId: player.id,
       playerName: player.name,
       scoreChange: POINTS_CORRECT,
-    })
+    });
 
     broadcast(room, {
-      type: 'question_done',
+      type: "question_done",
       winnerId: player.id,
       winnerName: player.name,
       correctIndex: currentQ.correctIndex,
-    })
+    });
 
-    broadcast(room, { type: 'leaderboard', players: getLeaderboard(room) })
+    broadcast(room, { type: "leaderboard", players: getLeaderboard(room) });
 
     // Auto-advance to next question after a short delay
     setTimeout(() => {
-      game.currentIndex++
-      broadcastCurrentQuestion(room)
-    }, AUTO_ADVANCE_DELAY_MS)
+      game.currentIndex++;
+      broadcastCurrentQuestion(room);
+    }, AUTO_ADVANCE_DELAY_MS);
   } else {
-    player.score += POINTS_WRONG
-    player.wrongAnswers++
+    player.score += POINTS_WRONG;
+    player.wrongAnswers++;
 
     // Broadcast individual result
     broadcast(room, {
-      type: 'answer_result',
+      type: "answer_result",
       correct: false,
       playerId: player.id,
       playerName: player.name,
       scoreChange: POINTS_WRONG,
-    })
+    });
 
-    broadcast(room, { type: 'leaderboard', players: getLeaderboard(room) })
+    broadcast(room, { type: "leaderboard", players: getLeaderboard(room) });
 
     // Check if all non-host players have answered (all wrong)
-    const nonHostPlayers = [...room.players.values()].filter(p => !p.isHost)
-    const allAnswered = nonHostPlayers.every(p => p.answeredCurrentQuestion)
+    const nonHostPlayers = [...room.players.values()].filter((p) => !p.isHost);
+    const allAnswered = nonHostPlayers.every((p) => p.answeredCurrentQuestion);
 
     if (allAnswered) {
-      game.questionDone = true
+      game.questionDone = true;
       broadcast(room, {
-        type: 'question_done',
+        type: "question_done",
         winnerId: null,
         winnerName: null,
         correctIndex: currentQ.correctIndex,
-      })
+      });
       setTimeout(() => {
-        game.currentIndex++
-        broadcastCurrentQuestion(room)
-      }, AUTO_ADVANCE_DELAY_MS)
+        game.currentIndex++;
+        broadcastCurrentQuestion(room);
+      }, AUTO_ADVANCE_DELAY_MS);
     }
   }
 
-  return {}
+  return {};
 }
 
-export function skipQuestion(roomId: string, playerId: string): { error?: string } {
-  const room = rooms.get(roomId)
-  if (!room) return { error: 'Room tidak ditemukan.' }
+export function skipQuestion(
+  roomId: string,
+  playerId: string,
+): { error?: string } {
+  const room = rooms.get(roomId);
+  if (!room) return { error: "Room tidak ditemukan." };
 
-  const player = room.players.get(playerId)
-  if (!player?.isHost) return { error: 'Hanya host yang bisa skip soal.' }
+  const player = room.players.get(playerId);
+  if (!player?.isHost) return { error: "Hanya host yang bisa skip soal." };
 
-  const { game } = room
-  if (game.status !== 'playing') return { error: 'Game belum dimulai.' }
-  if (game.questionDone) return { error: 'Soal sudah selesai.' }
+  const { game } = room;
+  if (game.status !== "playing") return { error: "Game belum dimulai." };
+  if (game.questionDone) return { error: "Soal sudah selesai." };
 
-  const currentQ = game.questions[game.currentIndex]
-  game.questionDone = true
+  const currentQ = game.questions[game.currentIndex];
+  game.questionDone = true;
 
   broadcast(room, {
-    type: 'question_done',
+    type: "question_done",
     winnerId: null,
     winnerName: null,
     correctIndex: currentQ.correctIndex,
-  })
+  });
 
-  broadcast(room, { type: 'leaderboard', players: getLeaderboard(room) })
+  broadcast(room, { type: "leaderboard", players: getLeaderboard(room) });
 
   setTimeout(() => {
-    game.currentIndex++
-    broadcastCurrentQuestion(room)
-  }, AUTO_ADVANCE_DELAY_MS)
+    game.currentIndex++;
+    broadcastCurrentQuestion(room);
+  }, AUTO_ADVANCE_DELAY_MS);
 
-  return {}
+  return {};
 }
 
 function endGame(room: Room) {
-  room.game.status = 'finished'
-  broadcast(room, { type: 'game_over', players: getLeaderboard(room) })
+  room.game.status = "finished";
+  broadcast(room, { type: "game_over", players: getLeaderboard(room) });
 }
