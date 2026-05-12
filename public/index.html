@@ -683,7 +683,23 @@
       Adu kecepatan &amp; pengetahuan secara real-time. Siapa yang tercepat menjawab benar?
     </p>
   </div>
-  <div class="home-roles anim-fade-2">
+
+  <!-- Auth Section (shown when not logged in) -->
+  <div id="home-auth-section" class="home-roles anim-fade-2">
+    <div class="role-card" onclick="showScreen('screen-login')">
+      <span class="role-icon">🔓</span>
+      <div class="role-title">Masuk</div>
+      <div class="role-desc">Gunakan akun Anda</div>
+    </div>
+    <div class="role-card" onclick="showScreen('screen-register')">
+      <span class="role-icon">✏️</span>
+      <div class="role-title">Daftar</div>
+      <div class="role-desc">Buat akun baru</div>
+    </div>
+  </div>
+
+  <!-- Game Section (shown when logged in) -->
+  <div id="home-game-section" class="home-roles anim-fade-2">
     <div class="role-card" onclick="goToHostSetup()">
       <span class="role-icon">👑</span>
       <div class="role-title">Buat Room</div>
@@ -695,6 +711,21 @@
       <div class="role-desc">Bergabung sebagai Peserta</div>
     </div>
   </div>
+
+  <!-- User Info (shown when logged in) -->
+  <div id="home-user-info" style="text-align:center; animation:fadeIn .4s ease both; margin-top:1rem">
+    <p style="font-size:.9rem; color:var(--muted); margin-bottom:.5rem">Logged in sebagai</p>
+    <p style="font-size:1.2rem; font-weight:700; color:var(--white)" id="home-username"></p>
+    <div style="display:flex; gap:.5rem; justify-content:center; margin-top:.75rem">
+      <button class="btn btn-ghost" style="font-size:.75rem; padding:.4rem 1rem" onclick="showScreen('screen-profile')">
+        👤 Profil
+      </button>
+      <button class="btn btn-ghost" style="font-size:.75rem; padding:.4rem 1rem" onclick="handleLogout()">
+        🚪 Logout
+      </button>
+    </div>
+  </div>
+
   <p class="text-muted anim-fade-3" style="font-size:.75rem; text-align:center">
     15 soal • +10 benar • −5 salah • Real-time
   </p>
@@ -850,10 +881,133 @@
   </div>
 </div>
 
-<!-- Mobile LB toggle -->
-<button class="btn btn-red" id="mobile-lb-btn" onclick="openMobileLb()" style="border-radius:50%;width:50px;height:50px;padding:0;font-size:1.2rem">
-  🏆
-</button>
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: LOGIN
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+  <div style="display:flex; align-items:center; justify-content:center; min-height:100vh; padding:2rem 1.5rem">
+    <div class="join-form anim-fade">
+      <div class="text-center" style="margin-bottom:2rem">
+        <div class="title-kanji" style="font-size:2.5rem">ログイン</div>
+        <div class="title-sub" style="margin-top:.3rem">Masuk ke Akun</div>
+      </div>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" class="input"
+               placeholder="Masukkan username…" maxlength="50"
+               onkeydown="if(event.key==='Enter')handleLogin()" />
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" class="input"
+               placeholder="Masukkan password…"
+               onkeydown="if(event.key==='Enter')handleLogin()" />
+      </div>
+
+      <button class="btn btn-red btn-full btn-lg mt-2" id="btn-login" onclick="handleLogin()">
+        🔓 Masuk
+      </button>
+      <button class="btn btn-ghost btn-full mt-1" onclick="showScreen('screen-register')">
+        ✏️ Daftar Akun Baru
+      </button>
+      <button class="btn btn-ghost btn-full mt-1" onclick="showScreen('screen-home')">
+        ← Kembali
+      </button>
+
+      <p class="text-muted text-center mt-2" style="font-size:.8rem">
+        <span id="login-error" style="color:var(--wrong)"></span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: REGISTER
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-register" class="screen">
+  <div style="display:flex; align-items:center; justify-content:center; min-height:100vh; padding:2rem 1.5rem">
+    <div class="join-form anim-fade">
+      <div class="text-center" style="margin-bottom:2rem">
+        <div class="title-kanji" style="font-size:2.5rem">登録</div>
+        <div class="title-sub" style="margin-top:.3rem">Daftar Akun Baru</div>
+      </div>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="register-username" class="input"
+               placeholder="Buat username…" maxlength="50"
+               onkeydown="if(event.key==='Enter')handleRegister()" />
+      </div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="register-email" class="input"
+               placeholder="Masukkan email…" maxlength="100"
+               onkeydown="if(event.key==='Enter')handleRegister()" />
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="register-password" class="input"
+               placeholder="Buat password (min. 6 karakter)…"
+               onkeydown="if(event.key==='Enter')handleRegister()" />
+      </div>
+
+      <button class="btn btn-red btn-full btn-lg mt-2" id="btn-register" onclick="handleRegister()">
+        ✏️ Daftar
+      </button>
+      <button class="btn btn-ghost btn-full mt-1" onclick="showScreen('screen-login')">
+        🔓 Sudah Punya Akun
+      </button>
+      <button class="btn btn-ghost btn-full mt-1" onclick="showScreen('screen-home')">
+        ← Kembali
+      </button>
+
+      <p class="text-muted text-center mt-2" style="font-size:.8rem">
+        <span id="register-error" style="color:var(--wrong)"></span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     SCREEN: USER PROFILE (displayed after login)
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-profile" class="screen">
+  <div style="display:flex; align-items:center; justify-content:center; min-height:100vh; padding:2rem 1.5rem">
+    <div class="card" style="width:100%; max-width:420px; text-align:center;">
+      <div class="title-kanji" style="font-size:2rem; margin-bottom:1rem">プロフィール</div>
+      
+      <div style="padding:1.5rem 0; border-bottom:1px solid var(--border); margin-bottom:1.5rem">
+        <p class="text-muted" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.1em; margin-bottom:.5rem">Selamat datang,</p>
+        <p style="font-size:1.3rem; font-weight:700; color:var(--white)" id="profile-username"></p>
+        <p class="text-muted" style="font-size:.85rem; margin-top:.5rem" id="profile-email"></p>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:.75rem; margin-bottom:1.5rem">
+        <div class="card" style="background:var(--surface); padding:1rem">
+          <p class="text-muted" style="font-size:.8rem">Total Permainan</p>
+          <p style="font-size:1.5rem; font-weight:700; color:var(--gold)" id="profile-games">0</p>
+        </div>
+        <div class="card" style="background:var(--surface); padding:1rem">
+          <p class="text-muted" style="font-size:.8rem">Total Skor</p>
+          <p style="font-size:1.5rem; font-weight:700; color:var(--red)" id="profile-score">0</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <button class="btn btn-red btn-full mt-2" onclick="goToHomeFromProfile()">
+        ⚔️ Mulai Bermain
+      </button>
+      <button class="btn btn-ghost btn-full mt-1" onclick="handleLogout()">
+        🚪 Logout
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════════════════════
      SCREEN: GAME OVER
@@ -901,6 +1055,10 @@ const state = {
   questionDone: false,
   myAnswerIndex: null,   // null = haven't answered
   currentCorrectIndex: null,
+  // Auth
+  isAuthenticated: false,
+  currentUser: null,
+  currentUserId: null,
 }
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
@@ -953,6 +1111,136 @@ function showScreen(id) {
 
 function currentScreen() {
   return document.querySelector('.screen.active')?.id ?? ''
+}
+
+// ─── Authentication ───────────────────────────────────────────────────────────
+async function handleRegister() {
+  const username = document.getElementById('register-username').value.trim()
+  const email = document.getElementById('register-email').value.trim()
+  const password = document.getElementById('register-password').value.trim()
+  const errorEl = document.getElementById('register-error')
+
+  if (!username || !email || !password) {
+    errorEl.textContent = '⚠️ Isi semua kolom'
+    return
+  }
+
+  const btn = document.getElementById('btn-register')
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Mendaftar…'
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    })
+    const data = await res.json()
+
+    if (!data.success) {
+      errorEl.textContent = '❌ ' + data.message
+      btn.disabled = false
+      btn.innerHTML = '📝 Daftar'
+      return
+    }
+
+    showToast('✅ Registrasi berhasil! Silakan login.')
+    document.getElementById('register-username').value = ''
+    document.getElementById('register-email').value = ''
+    document.getElementById('register-password').value = ''
+    errorEl.textContent = ''
+    btn.disabled = false
+    btn.innerHTML = '📝 Daftar'
+    showScreen('screen-login')
+  } catch (err) {
+    errorEl.textContent = '❌ Kesalahan: ' + err.message
+    btn.disabled = false
+    btn.innerHTML = '📝 Daftar'
+  }
+}
+
+async function handleLogin() {
+  const username = document.getElementById('login-username').value.trim()
+  const password = document.getElementById('login-password').value.trim()
+  const errorEl = document.getElementById('login-error')
+
+  if (!username || !password) {
+    errorEl.textContent = '⚠️ Isi username dan password'
+    return
+  }
+
+  const btn = document.getElementById('btn-login')
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Login…'
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    })
+    const data = await res.json()
+
+    if (!data.success) {
+      errorEl.textContent = '❌ ' + data.message
+      btn.disabled = false
+      btn.innerHTML = '🔓 Login'
+      return
+    }
+
+    // Save token and user info to localStorage
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('username', data.username)
+    localStorage.setItem('userId', data.userId)
+    state.isAuthenticated = true
+    state.currentUser = data.username
+    state.currentUserId = data.userId
+
+    showToast('✅ Login berhasil! Selamat datang, ' + data.username)
+    document.getElementById('login-username').value = ''
+    document.getElementById('login-password').value = ''
+    errorEl.textContent = ''
+    btn.disabled = false
+    btn.innerHTML = '🔓 Login'
+
+    updateAuthUI()
+    showScreen('screen-home')
+  } catch (err) {
+    errorEl.textContent = '❌ Kesalahan: ' + err.message
+    btn.disabled = false
+    btn.innerHTML = '🔓 Login'
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('username')
+  localStorage.removeItem('userId')
+  state.isAuthenticated = false
+  state.currentUser = null
+  state.currentUserId = null
+  showToast('👋 Logout berhasil')
+  updateAuthUI()
+  if (state.ws) state.ws.close()
+  showScreen('screen-home')
+}
+
+function updateAuthUI() {
+  const authSection = document.getElementById('home-auth-section')
+  const gameSection = document.getElementById('home-game-section')
+  const userInfo = document.getElementById('home-user-info')
+  
+  if (state.isAuthenticated) {
+    if (authSection) authSection.style.display = 'none'
+    if (gameSection) gameSection.style.display = 'grid'
+    if (userInfo) userInfo.style.display = 'block'
+    const userDisplay = document.getElementById('home-username')
+    if (userDisplay) userDisplay.textContent = state.currentUser || 'User'
+  } else {
+    if (authSection) authSection.style.display = 'grid'
+    if (gameSection) gameSection.style.display = 'none'
+    if (userInfo) userInfo.style.display = 'none'
+  }
 }
 
 // ─── Home ─────────────────────────────────────────────────────────────────────
@@ -1335,6 +1623,18 @@ function escHtml(str) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+// Check if user is already logged in
+const token = localStorage.getItem('token')
+const username = localStorage.getItem('username')
+const userId = localStorage.getItem('userId')
+
+if (token && username && userId) {
+  state.isAuthenticated = true
+  state.currentUser = username
+  state.currentUserId = userId
+}
+
+updateAuthUI()
 connectWS()
 </script>
 </body>
