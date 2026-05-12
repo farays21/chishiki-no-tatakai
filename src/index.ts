@@ -17,6 +17,14 @@ import {
   sendTo,
   playerPublic,
 } from './gameManager'
+import {
+  register,
+  login,
+  verifySession,
+  logout,
+  getUser,
+  updateUserStats,
+} from './auth'
 
 // ─── WebSocket Setup ──────────────────────────────────────────────────────────
 
@@ -28,6 +36,82 @@ const app = new Hono()
 
 // Static files from /public
 app.use('/*', serveStatic({ root: './public' }))
+
+// ─── REST: Authentication ────────────────────────────────────────────────────
+
+app.post('/api/auth/register', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { username, email, password } = body
+
+    const result = register(username, email, password)
+    if (!result.success) {
+      return c.json({ success: false, message: result.message }, 400)
+    }
+
+    return c.json({
+      success: true,
+      message: result.message,
+      userId: result.userId,
+    })
+  } catch (error) {
+    return c.json({ success: false, message: 'Error registrasi' }, 500)
+  }
+})
+
+app.post('/api/auth/login', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { username, password } = body
+
+    const result = login(username, password)
+    if (!result.success) {
+      return c.json({ success: false, message: result.message }, 401)
+    }
+
+    return c.json({
+      success: true,
+      message: result.message,
+      token: result.token,
+      username: result.username,
+      userId: result.userId,
+    })
+  } catch (error) {
+    return c.json({ success: false, message: 'Error login' }, 500)
+  }
+})
+
+app.get('/api/auth/verify', (c) => {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '')
+  if (!token) {
+    return c.json({ valid: false }, 401)
+  }
+
+  const result = verifySession(token)
+  if (!result.valid || !result.session) {
+    return c.json({ valid: false }, 401)
+  }
+
+  const user = getUser(result.session.userId)
+  return c.json({
+    valid: true,
+    user: {
+      id: user?.id,
+      username: user?.username,
+      email: user?.email,
+    },
+  })
+})
+
+app.post('/api/auth/logout', (c) => {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '')
+  if (!token) {
+    return c.json({ success: false }, 401)
+  }
+
+  logout(token)
+  return c.json({ success: true, message: 'Logout berhasil' })
+})
 
 // ─── REST: Create Room ────────────────────────────────────────────────────────
 
