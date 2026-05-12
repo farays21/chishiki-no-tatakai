@@ -18,11 +18,20 @@ export interface QuestionPayload {
   category: string
 }
 
+// ─── Authentication ──────────────────────────────────────────────────────────
+
+export interface AuthUser {
+  id: string
+  username: string
+  email: string
+}
+
 // ─── Player ──────────────────────────────────────────────────────────────────
 
 export interface Player {
   id: string
   name: string
+  userId?: string // Optional: user ID if authenticated
   score: number
   isHost: boolean
   ws: WSContext<ServerWebSocket>
