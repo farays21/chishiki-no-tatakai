@@ -68,6 +68,16 @@ export interface Room {
   game: GameState
 }
 
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  senderId: string
+  senderName: string
+  isHost: boolean
+  text: string
+  timestamp: number
+}
+
 // ─── WebSocket Message Shapes ─────────────────────────────────────────────────
 
 // Client → Server
@@ -76,6 +86,7 @@ export type ClientMessage =
   | { type: 'start_game'; roomId: string }
   | { type: 'answer'; roomId: string; answerIndex: number }
   | { type: 'skip_question'; roomId: string }
+  | { type: 'chat'; text: string }
 
 // Server → Client
 export type ServerMessage =
@@ -90,3 +101,4 @@ export type ServerMessage =
   | { type: 'error'; message: string }
   | { type: 'host_disconnected' }
   | { type: 'player_left'; playerName: string }
+  | { type: 'chat_message'; message: ChatMessage }

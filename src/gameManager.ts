@@ -5,6 +5,7 @@ const TOTAL_QUESTIONS = 10;
 const POINTS_CORRECT = 10;
 const POINTS_WRONG = -5;
 const AUTO_ADVANCE_DELAY_MS = 1500; // time before auto-advancing after correct answer
+const CHAT_MAX_LENGTH = 200;        // max characters per chat message
 
 // ─── Singleton Rooms Store ────────────────────────────────────────────────────
 
@@ -137,6 +138,36 @@ export function cleanupEmptyRoom(roomId: string) {
   if (room && room.players.size === 0) {
     rooms.delete(roomId);
   }
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+export function sendChat(
+  roomId: string,
+  playerId: string,
+  text: string,
+): { error?: string } {
+  const room = rooms.get(roomId);
+  if (!room) return { error: "Room tidak ditemukan." };
+
+  const player = room.players.get(playerId);
+  if (!player) return { error: "Pemain tidak ditemukan." };
+
+  const trimmed = text.trim().slice(0, CHAT_MAX_LENGTH);
+  if (!trimmed) return { error: "Pesan tidak boleh kosong." };
+
+  broadcast(room, {
+    type: "chat_message",
+    message: {
+      senderId: player.id,
+      senderName: player.name,
+      isHost: player.isHost,
+      text: trimmed,
+      timestamp: Date.now(),
+    },
+  });
+
+  return {};
 }
 
 // ─── Game Control ─────────────────────────────────────────────────────────────

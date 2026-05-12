@@ -11,6 +11,7 @@ import {
   handleAnswer,
   startGame,
   skipQuestion,
+  sendChat,
   getRoom,
   getLeaderboard,
   broadcast,
@@ -221,6 +222,15 @@ app.get(
         // ── skip_question ───────────────────────────────────────────────────
         if (msg.type === 'skip_question') {
           const result = skipQuestion(connectedRoomId, connectedPlayerId)
+          if (result.error) {
+            ws.send(JSON.stringify({ type: 'error', message: result.error }))
+          }
+          return
+        }
+
+        // ── chat ────────────────────────────────────────────────────────────
+        if (msg.type === 'chat') {
+          const result = sendChat(connectedRoomId, connectedPlayerId, msg.text)
           if (result.error) {
             ws.send(JSON.stringify({ type: 'error', message: result.error }))
           }
