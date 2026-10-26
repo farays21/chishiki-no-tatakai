@@ -582,8 +582,8 @@
     }
 
     /* ── Responsive ───────────────────────────────────────────────────────── */
-    @media (max-width: 700px) {
-      .game-sidebar { display: none; }
+    @media (max-width: 768px) {
+      .game-sidebar { display: none !important; }
       .answers-grid { grid-template-columns: 1fr; }
     }
 
@@ -611,7 +611,7 @@
       display: none;
       position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 50;
     }
-    @media (max-width: 700px) { #mobile-lb-btn { display: flex; } }
+    @media (max-width: 768px) { #mobile-lb-btn { display: flex; } }
 
     .mobile-lb-overlay {
       display: none; position: fixed; inset: 0; z-index: 60;
@@ -784,7 +784,7 @@
       font-size: .65rem; font-weight: 700;
       display: none; align-items: center; justify-content: center;
     }
-    @media (max-width: 700px) { #chat-fab { display: flex; } }
+    @media (max-width: 768px) { #chat-fab { display: flex; } }
 
     /* Mobile chat overlay */
     .mobile-chat-overlay {
@@ -804,6 +804,8 @@
       width: 100%; max-width: 480px; margin-top: 1rem;
     }
     .lobby-chat-wrap .chat-messages { height: 160px; }
+
+
   </style>
 </head>
 <body>
